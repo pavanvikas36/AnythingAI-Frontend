@@ -22,7 +22,12 @@ export default function Dashboard() {
     fetchTasks();
   };
 
+  // ✅ UPDATED DELETE FUNCTION WITH CONFIRM POPUP
   const deleteTask = async (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this task?");
+    
+    if (!confirmDelete) return;
+
     await API.delete(`/task/${id}`);
     fetchTasks();
   };
