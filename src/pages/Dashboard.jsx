@@ -5,6 +5,7 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState("");
 
   // Cursor glow state
   const [cursor, setCursor] = useState({ x: 0, y: 0 });
@@ -13,16 +14,25 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
 
+  // Fetch tasks
   const fetchTasks = async () => {
     const res = await API.get("/task");
     setTasks(res.data);
   };
 
+  // Add task with calendar date
   const addTask = async () => {
     if (!title) return;
-    await API.post("/task", { title, description });
+
+    await API.post("/task", {
+      title,
+      description,
+      dueDate
+    });
+
     setTitle("");
     setDescription("");
+    setDueDate("");
     fetchTasks();
   };
 
@@ -44,11 +54,36 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
+  // Auth check + fetch tasks
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) window.location.href = "/";
     fetchTasks();
   }, []);
+
+  // Request notification permission
+  useEffect(() => {
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Reminder logic
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+
+    tasks.forEach((task) => {
+      if (task.dueDate) {
+        const taskDate = new Date(task.dueDate).toISOString().split("T")[0];
+
+        if (taskDate === today) {
+          new Notification("Task Reminder 🔔", {
+            body: task.title
+          });
+        }
+      }
+    });
+  }, [tasks]);
 
   // cursor glow movement
   const handleMouseMove = (e) => {
@@ -99,8 +134,16 @@ export default function Dashboard() {
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full mb-5 p-3 border rounded-xl focus:ring-2 focus:ring-sky-500 transition"
+          className="w-full mb-4 p-3 border rounded-xl focus:ring-2 focus:ring-sky-500 transition"
           placeholder="Task description"
+        />
+
+        {/* CALENDAR DATE PICKER */}
+        <input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          className="w-full mb-5 p-3 border rounded-xl focus:ring-2 focus:ring-sky-500 transition"
         />
 
         <button
@@ -118,26 +161,40 @@ export default function Dashboard() {
             No tasks yet — start by adding one 🚀
           </p>
         ) : (
-          tasks.map((task) => (
-            <div
-              key={task._id}
-              className="backdrop-blur-md bg-white/80 p-5 rounded-2xl shadow-lg mb-4 flex justify-between items-center transition hover:scale-[1.02] hover:shadow-2xl"
-            >
-              <div>
-                <h4 className="font-semibold text-lg text-black">
-                  {task.title}
-                </h4>
-                <p className="text-gray-600">{task.description}</p>
-              </div>
+          tasks.map((task) => {
+            const today = new Date().toISOString().split("T")[0];
+            const taskDate = task.dueDate
+              ? new Date(task.dueDate).toISOString().split("T")[0]
+              : null;
 
-              <button
-                onClick={() => handleDeleteClick(task._id)}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg shadow hover:bg-red-600 hover:scale-105 transition"
+            return (
+              <div
+                key={task._id}
+                className="backdrop-blur-md bg-white/80 p-5 rounded-2xl shadow-lg mb-4 flex justify-between items-center transition hover:scale-[1.02] hover:shadow-2xl"
               >
-                Delete
-              </button>
-            </div>
-          ))
+                <div>
+                  <h4 className="font-semibold text-lg text-black">
+                    {task.title}
+                  </h4>
+                  <p className="text-gray-600">{task.description}</p>
+
+                  {/* DUE TODAY BADGE */}
+                  {taskDate === today && (
+                    <span className="text-red-500 text-sm font-semibold">
+                      Due Today 🔴
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => handleDeleteClick(task._id)}
+                  className="bg-red-500 text-white px-4 py-2 rounded-lg shadow hover:bg-red-600 hover:scale-105 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            );
+          })
         )}
       </div>
 
