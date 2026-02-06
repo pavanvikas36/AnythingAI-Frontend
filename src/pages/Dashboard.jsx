@@ -9,6 +9,10 @@ export default function Dashboard() {
   // Cursor glow state
   const [cursor, setCursor] = useState({ x: 0, y: 0 });
 
+  // Delete modal state
+  const [showModal, setShowModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+
   const fetchTasks = async () => {
     const res = await API.get("/task");
     setTasks(res.data);
@@ -22,13 +26,16 @@ export default function Dashboard() {
     fetchTasks();
   };
 
-  // ✅ UPDATED DELETE FUNCTION WITH CONFIRM POPUP
-  const deleteTask = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this task?");
-    
-    if (!confirmDelete) return;
+  // OPEN MODAL
+  const handleDeleteClick = (id) => {
+    setSelectedTaskId(id);
+    setShowModal(true);
+  };
 
-    await API.delete(`/task/${id}`);
+  // CONFIRM DELETE
+  const confirmDelete = async () => {
+    await API.delete(`/task/${selectedTaskId}`);
+    setShowModal(false);
     fetchTasks();
   };
 
@@ -124,7 +131,7 @@ export default function Dashboard() {
               </div>
 
               <button
-                onClick={() => deleteTask(task._id)}
+                onClick={() => handleDeleteClick(task._id)}
                 className="bg-red-500 text-white px-4 py-2 rounded-lg shadow hover:bg-red-600 hover:scale-105 transition"
               >
                 Delete
@@ -133,6 +140,37 @@ export default function Dashboard() {
           ))
         )}
       </div>
+
+      {/* DELETE CONFIRM MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl w-[350px] text-center">
+            <h3 className="text-xl font-semibold mb-4 text-black">
+              Delete Task
+            </h3>
+
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this task?
+            </p>
+
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-5 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                className="px-5 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
