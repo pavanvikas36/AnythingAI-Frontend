@@ -6,103 +6,133 @@ export default function Dashboard() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  // Fetch tasks
+  // Cursor glow state
+  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+
+  // Delete modal state
+  const [showModal, setShowModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+
   const fetchTasks = async () => {
     const res = await API.get("/task");
     setTasks(res.data);
   };
 
-  // Add task
   const addTask = async () => {
     if (!title) return;
-
-    await API.post("/task", {
-      title,
-      description
-    });
-
+    await API.post("/task", { title, description });
     setTitle("");
     setDescription("");
     fetchTasks();
   };
 
-  // Delete task
-  const deleteTask = async (id) => {
-    await API.delete(`/task/${id}`);
+  // OPEN MODAL
+  const handleDeleteClick = (id) => {
+    setSelectedTaskId(id);
+    setShowModal(true);
+  };
+
+  // CONFIRM DELETE
+  const confirmDelete = async () => {
+    await API.delete(`/task/${selectedTaskId}`);
+    setShowModal(false);
     fetchTasks();
   };
 
-  // Logout
   const logout = () => {
     localStorage.removeItem("token");
     window.location.href = "/";
   };
 
-  // Auth check + fetch tasks
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) window.location.href = "/";
     fetchTasks();
   }, []);
 
+  // cursor glow movement
+  const handleMouseMove = (e) => {
+    setCursor({ x: e.clientX, y: e.clientY });
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div
+      onMouseMove={handleMouseMove}
+      className="relative min-h-screen bg-gradient-to-br from-sky-400 via-sky-500 to-sky-600 p-6 overflow-hidden"
+    >
+      {/* Cursor Glow */}
+      <div
+        className="pointer-events-none fixed w-40 h-40 rounded-full bg-white/20 blur-3xl transition duration-75"
+        style={{
+          left: cursor.x - 80,
+          top: cursor.y - 80
+        }}
+      ></div>
+
       {/* Header */}
-      <div className="flex justify-between items-center max-w-2xl mx-auto mb-6">
-        <h2 className="text-2xl font-bold">Dashboard</h2>
+      <div className="flex justify-between items-center max-w-3xl mx-auto mb-8">
+        <h2 className="text-3xl font-bold text-white tracking-wide">
+          Dashboard
+        </h2>
 
         <button
           onClick={logout}
-          className="bg-red-500 text-white px-4 py-2 rounded"
+          className="bg-white text-sky-600 px-5 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
         >
           Logout
         </button>
       </div>
 
-      {/* Add Task */}
-      <div className="bg-white p-6 rounded shadow max-w-2xl mx-auto mb-6">
-        <h3 className="text-lg font-semibold mb-4">Add Task</h3>
+      {/* Add Task Section */}
+      <div className="backdrop-blur-lg bg-white/80 p-8 rounded-3xl shadow-xl max-w-3xl mx-auto mb-8 transition hover:scale-[1.01]">
+        <h3 className="text-xl font-semibold mb-5 text-black">
+          Add New Task
+        </h3>
 
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full mb-3 p-2 border rounded"
+          className="w-full mb-4 p-3 border rounded-xl focus:ring-2 focus:ring-sky-500 transition"
           placeholder="Task title"
         />
 
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full mb-3 p-2 border rounded"
+          className="w-full mb-5 p-3 border rounded-xl focus:ring-2 focus:ring-sky-500 transition"
           placeholder="Task description"
         />
 
         <button
           onClick={addTask}
-          className="w-full bg-blue-500 text-white py-2 rounded"
+          className="w-full bg-sky-500 text-white py-3 rounded-xl font-semibold shadow-lg hover:bg-sky-600 hover:scale-[1.02] transition"
         >
           Add Task
         </button>
       </div>
 
-      {/* Task List */}
-      <div className="max-w-2xl mx-auto">
+      {/* Tasks List */}
+      <div className="max-w-3xl mx-auto">
         {tasks.length === 0 ? (
-          <p className="text-center text-gray-500">No tasks yet</p>
+          <p className="text-white text-center text-lg mt-10">
+            No tasks yet — start by adding one 🚀
+          </p>
         ) : (
           tasks.map((task) => (
             <div
               key={task._id}
-              className="bg-white p-4 rounded shadow mb-3 flex justify-between items-center"
+              className="backdrop-blur-md bg-white/80 p-5 rounded-2xl shadow-lg mb-4 flex justify-between items-center transition hover:scale-[1.02] hover:shadow-2xl"
             >
               <div>
-                <h4 className="font-semibold">{task.title}</h4>
+                <h4 className="font-semibold text-lg text-black">
+                  {task.title}
+                </h4>
                 <p className="text-gray-600">{task.description}</p>
               </div>
 
               <button
-                onClick={() => deleteTask(task._id)}
-                className="bg-red-500 text-white px-3 py-1 rounded"
+                onClick={() => handleDeleteClick(task._id)}
+                className="bg-red-500 text-white px-4 py-2 rounded-lg shadow hover:bg-red-600 hover:scale-105 transition"
               >
                 Delete
               </button>
@@ -110,6 +140,37 @@ export default function Dashboard() {
           ))
         )}
       </div>
+
+      {/* DELETE CONFIRM MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl w-[350px] text-center">
+            <h3 className="text-xl font-semibold mb-4 text-black">
+              Delete Task
+            </h3>
+
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this task?
+            </p>
+
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-5 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                className="px-5 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+} 
