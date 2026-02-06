@@ -5,14 +5,6 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState("");
-
-  // Cursor glow state
-  const [cursor, setCursor] = useState({ x: 0, y: 0 });
-
-  // Delete modal state
-  const [showModal, setShowModal] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState(null);
 
   // Fetch tasks
   const fetchTasks = async () => {
@@ -20,35 +12,27 @@ export default function Dashboard() {
     setTasks(res.data);
   };
 
-  // Add task with calendar date
+  // Add task
   const addTask = async () => {
     if (!title) return;
 
     await API.post("/task", {
       title,
-      description,
-      dueDate
+      description
     });
 
     setTitle("");
     setDescription("");
-    setDueDate("");
     fetchTasks();
   };
 
-  // OPEN MODAL
-  const handleDeleteClick = (id) => {
-    setSelectedTaskId(id);
-    setShowModal(true);
-  };
-
-  // CONFIRM DELETE
-  const confirmDelete = async () => {
-    await API.delete(`/task/${selectedTaskId}`);
-    setShowModal(false);
+  // Delete task
+  const deleteTask = async (id) => {
+    await API.delete(`/task/${id}`);
     fetchTasks();
   };
 
+  // Logout
   const logout = () => {
     localStorage.removeItem("token");
     window.location.href = "/";
@@ -61,173 +45,71 @@ export default function Dashboard() {
     fetchTasks();
   }, []);
 
-  // Request notification permission
-  useEffect(() => {
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  // Reminder logic
-  useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-
-    tasks.forEach((task) => {
-      if (task.dueDate) {
-        const taskDate = new Date(task.dueDate).toISOString().split("T")[0];
-
-        if (taskDate === today) {
-          new Notification("Task Reminder 🔔", {
-            body: task.title
-          });
-        }
-      }
-    });
-  }, [tasks]);
-
-  // cursor glow movement
-  const handleMouseMove = (e) => {
-    setCursor({ x: e.clientX, y: e.clientY });
-  };
-
   return (
-    <div
-      onMouseMove={handleMouseMove}
-      className="relative min-h-screen bg-gradient-to-br from-sky-400 via-sky-500 to-sky-600 p-6 overflow-hidden"
-    >
-      {/* Cursor Glow */}
-      <div
-        className="pointer-events-none fixed w-40 h-40 rounded-full bg-white/20 blur-3xl transition duration-75"
-        style={{
-          left: cursor.x - 80,
-          top: cursor.y - 80
-        }}
-      ></div>
-
+    <div className="min-h-screen bg-gray-100 p-6">
       {/* Header */}
-      <div className="flex justify-between items-center max-w-3xl mx-auto mb-8">
-        <h2 className="text-3xl font-bold text-white tracking-wide">
-          Dashboard
-        </h2>
+      <div className="flex justify-between items-center max-w-2xl mx-auto mb-6">
+        <h2 className="text-2xl font-bold">Dashboard</h2>
 
         <button
           onClick={logout}
-          className="bg-white text-sky-600 px-5 py-2 rounded-xl font-semibold shadow hover:scale-105 transition"
+          className="bg-red-500 text-white px-4 py-2 rounded"
         >
           Logout
         </button>
       </div>
 
-      {/* Add Task Section */}
-      <div className="backdrop-blur-lg bg-white/80 p-8 rounded-3xl shadow-xl max-w-3xl mx-auto mb-8 transition hover:scale-[1.01]">
-        <h3 className="text-xl font-semibold mb-5 text-black">
-          Add New Task
-        </h3>
+      {/* Add Task */}
+      <div className="bg-white p-6 rounded shadow max-w-2xl mx-auto mb-6">
+        <h3 className="text-lg font-semibold mb-4">Add Task</h3>
 
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full mb-4 p-3 border rounded-xl focus:ring-2 focus:ring-sky-500 transition"
+          className="w-full mb-3 p-2 border rounded"
           placeholder="Task title"
         />
 
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full mb-4 p-3 border rounded-xl focus:ring-2 focus:ring-sky-500 transition"
+          className="w-full mb-3 p-2 border rounded"
           placeholder="Task description"
-        />
-
-        {/* CALENDAR DATE PICKER */}
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="w-full mb-5 p-3 border rounded-xl focus:ring-2 focus:ring-sky-500 transition"
         />
 
         <button
           onClick={addTask}
-          className="w-full bg-sky-500 text-white py-3 rounded-xl font-semibold shadow-lg hover:bg-sky-600 hover:scale-[1.02] transition"
+          className="w-full bg-blue-500 text-white py-2 rounded"
         >
           Add Task
         </button>
       </div>
 
-      {/* Tasks List */}
-      <div className="max-w-3xl mx-auto">
+      {/* Task List */}
+      <div className="max-w-2xl mx-auto">
         {tasks.length === 0 ? (
-          <p className="text-white text-center text-lg mt-10">
-            No tasks yet — start by adding one 🚀
-          </p>
+          <p className="text-center text-gray-500">No tasks yet</p>
         ) : (
-          tasks.map((task) => {
-            const today = new Date().toISOString().split("T")[0];
-            const taskDate = task.dueDate
-              ? new Date(task.dueDate).toISOString().split("T")[0]
-              : null;
-
-            return (
-              <div
-                key={task._id}
-                className="backdrop-blur-md bg-white/80 p-5 rounded-2xl shadow-lg mb-4 flex justify-between items-center transition hover:scale-[1.02] hover:shadow-2xl"
-              >
-                <div>
-                  <h4 className="font-semibold text-lg text-black">
-                    {task.title}
-                  </h4>
-                  <p className="text-gray-600">{task.description}</p>
-
-                  {/* DUE TODAY BADGE */}
-                  {taskDate === today && (
-                    <span className="text-red-500 text-sm font-semibold">
-                      Due Today 🔴
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => handleDeleteClick(task._id)}
-                  className="bg-red-500 text-white px-4 py-2 rounded-lg shadow hover:bg-red-600 hover:scale-105 transition"
-                >
-                  Delete
-                </button>
+          tasks.map((task) => (
+            <div
+              key={task._id}
+              className="bg-white p-4 rounded shadow mb-3 flex justify-between items-center"
+            >
+              <div>
+                <h4 className="font-semibold">{task.title}</h4>
+                <p className="text-gray-600">{task.description}</p>
               </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* DELETE CONFIRM MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-2xl shadow-2xl w-[350px] text-center">
-            <h3 className="text-xl font-semibold mb-4 text-black">
-              Delete Task
-            </h3>
-
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this task?
-            </p>
-
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-5 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 transition"
-              >
-                Cancel
-              </button>
 
               <button
-                onClick={confirmDelete}
-                className="px-5 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition"
+                onClick={() => deleteTask(task._id)}
+                className="bg-red-500 text-white px-3 py-1 rounded"
               >
                 Delete
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }
